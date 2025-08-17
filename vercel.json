@@ -1,11 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "public/*.html", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/", "dest": "/public/index.html" },
-    { "src": "/entrada", "dest": "/public/entrada.html" },
-    { "src": "/acceso", "dest": "/public/acceso.html" }
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
   ]
 }
