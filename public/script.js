@@ -1,19 +1,22 @@
+// Este script ya no necesita importar QRCode.
+// La librería está disponible globalmente gracias a la etiqueta <script> en el HTML.
+
 // Importa la librería de Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
-// Importa la librería para generar códigos QR
-import QRCode from 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
 
 // **Reemplaza con tus claves de Supabase**
-const SUPABASE_URL = 'https://mbjuhyxhupqpealiekrd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ianVoeHh1cHFwZWFsaWVrcmQiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1NTM5MDk4MCwiZXhwIjoyMDcwOTY2OTgwfQ.MWDRToY3GHPKVmW3whXahrmpxJI9vCRvNx34BzIfcbQ';
+const SUPABASE_URL = 'TU_URL_DE_SUPABASE';
+const SUPABASE_ANON_KEY = 'TU_KEY_ANON_DE_SUPABASE';
 
 // Inicializa el cliente de Supabase
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const qrcodeContainer = document.getElementById('qrcode');
 const messageElement = document.getElementById('message');
+const generateButton = document.getElementById('generateBtn');
 
-window.generateAndSaveTicket = async function() {
+// Agrega un "event listener" al botón para manejar la lógica
+generateButton.addEventListener('click', async () => {
     const ticketNumber = document.getElementById('ticketNumber').value;
     if (ticketNumber < 1 || ticketNumber > 600 || ticketNumber === '') {
         messageElement.textContent = 'Por favor, ingresa un número válido entre 1 y 600.';
@@ -22,16 +25,14 @@ window.generateAndSaveTicket = async function() {
         return;
     }
 
-    // Genera una cadena única para el QR (puedes usar un UUID para mayor seguridad)
     const qrData = `ticket-id-${ticketNumber}-${Date.now()}`;
     
-    // Intenta insertar la entrada en la base de datos de Supabase
     const { data, error } = await supabase
         .from('entradas')
         .insert([{ numero_entrada: ticketNumber, qr_data: qrData, validada: false }]);
 
     if (error) {
-        if (error.code === '23505') { // Código de error para duplicado
+        if (error.code === '23505') {
             messageElement.textContent = `La entrada #${ticketNumber} ya existe.`;
         } else {
             console.error('Error al guardar la entrada:', error.message);
@@ -41,7 +42,7 @@ window.generateAndSaveTicket = async function() {
         return;
     }
     
-    // Limpia el contenedor y genera el QR
+    // Ahora, usa la variable global QRCode que la librería puso en el navegador
     qrcodeContainer.innerHTML = '';
     new QRCode(qrcodeContainer, {
         text: qrData,
@@ -51,4 +52,4 @@ window.generateAndSaveTicket = async function() {
 
     messageElement.textContent = `¡Entrada #${ticketNumber} generada y guardada exitosamente!`;
     messageElement.style.color = 'green';
-};
+});
