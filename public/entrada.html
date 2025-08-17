@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrada Fiesta Chilinga</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-xl mx-auto bg-white rounded-lg p-6 shadow">
+    <h1 class="text-xl font-bold mb-4">Detalle de Entrada</h1>
+    <div id="detalle"></div>
+    <div id="qr" class="mt-4"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const detalleDiv = document.getElementById('detalle');
+
+    if(token){
+      try{
+        const decoded = atob(token);
+        const [num,salt] = decoded.split("-");
+        if(salt==="DCAC2025"){
+          detalleDiv.innerHTML = `
+            <p class="font-medium">Entrada #: ${num}</p>
+            <p>Fecha: 13/09/2025</p>
+            <p>Hora: 21hs</p>
+            <p>Dirección: Av. Ruiz Huidobro 4228 - Saavedra</p>
+          `;
+          new QRCode(document.getElementById("qr"), { text: token, width:120, height:120 });
+        }else{
+          detalleDiv.innerHTML = "<p class='text-red-600 font-bold'>Entrada inválida</p>";
+        }
+      }catch(e){
+        detalleDiv.innerHTML = "<p class='text-red-600 font-bold'>Token no válido</p>";
+      }
+    }else{
+      detalleDiv.innerHTML = "<p class='text-red-600 font-bold'>Token no proporcionado</p>";
+    }
+  </script>
+</body>
+</html>
