@@ -1,6 +1,14 @@
 {
     "require": {
-        "supabase/supabase-php": "^0.0.1",
-        "endroid/qr-code": "^6.0"
+        "supabase/supabase-php": "^1.2",
+        "endroid/qr-code": "^5.0"
+    },
+    "scripts": {
+        "vercel-build": "php -r \"echo 'Vercel building...';\""
+    },
+    "extra": {
+        "vercel-php": {
+            "version": "8.2"
+        }
     }
 }
