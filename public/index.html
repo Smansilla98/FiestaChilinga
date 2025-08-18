@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador y Validador de Entradas</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page { display: none; }
+        .page.active { display: block; }
+        .qr-button {
+            cursor: pointer;
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .qr-button:hover { background-color: #0056b3; }
+        .back-button {
+            margin-top: 20px;
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="ticket-list-page" class="page active">
+            <h1>Listado de Entradas</h1>
+            <ul id="ticket-list">
+                </ul>
+        </div>
+
+        <div id="qr-page" class="page">
+            <h2 id="ticket-number-display"></h2>
+            <div id="qrcode"></div>
+            <button id="back-to-list-btn" class="back-button">Regresar al listado</button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="script.js" type="module"></script>
+</body>
+</html>
