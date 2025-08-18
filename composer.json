@@ -1,0 +1,6 @@
+{
+    "require": {
+        "supabase/supabase-php": "^0.0.1",
+        "endroid/qr-code": "^6.0"
+    }
+}
