@@ -15,7 +15,7 @@
     "@supabase/supabase-js": "^2.38.5",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/auth-helpers-react": "^0.4.2",
-    "react-qr-reader": "^3.0.0",
+    "html5-qrcode": "^2.3.8",
     "qrcode": "^1.5.3",
     "lucide-react": "^0.294.0",
     "react-hot-toast": "^2.4.1"
