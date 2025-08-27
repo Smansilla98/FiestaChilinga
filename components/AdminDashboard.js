@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [downloadInfo, setDownloadInfo] = useState(null)
   const entriesPerPage = 10
 
   useEffect(() => {
@@ -101,37 +102,59 @@ export default function AdminDashboard() {
     if (entry.codigo) {
       const qrDataURL = await generateQRCodeDataURL(entry.codigo)
       setSelectedEntry({ ...entry, qrDataURL })
+      setDownloadInfo({ entryId: entry.id, codigo: entry.codigo, qrDataURL: qrDataURL, nombre: entry.nombre_asociado || '', apellido: entry.apellido_asociado || '' })
       setModalOpen(true)
     }
   }
 
-  const downloadQRPDF = async (qrDataURL, codigo, entryId) => {
+  const confirmDownloadPDF = async () => {
+    if (!downloadInfo.nombre || !downloadInfo.apellido) {
+      alert('Debes ingresar nombre y apellido')
+      return
+    }
+
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage([400, 600])
     const { width, height } = page.getSize()
 
-    const bgUrl = '/background.png'
-    const bgBytes = await fetch(bgUrl).then(res => res.arrayBuffer())
+    // Fondo
+    const bgBytes = await fetch('/background.png').then(res => res.arrayBuffer())
     const bgImage = await pdfDoc.embedPng(bgBytes)
-    page.drawImage(bgImage, { x: 0, y: 0, width, height })
+    page.drawImage(bgImage, { x: 0, y: 0, width: width, height: height })
 
-    const qrBytes = Uint8Array.from(atob(qrDataURL.split(',')[1]), c => c.charCodeAt(0))
+    // QR
+    const qrBytes = Uint8Array.from(atob(downloadInfo.qrDataURL.split(',')[1]), c => c.charCodeAt(0))
     const qrImage = await pdfDoc.embedPng(qrBytes)
     const qrSize = 150
     page.drawImage(qrImage, { x: (width - qrSize)/2, y: (height - qrSize)/2, width: qrSize, height: qrSize })
+
+    // Nombre y apellido
+    page.drawText(`${downloadInfo.nombre} ${downloadInfo.apellido}`, { x: 50, y: 50, size: 18 })
 
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], { type: 'application/pdf' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `${codigo}.pdf`
+    link.download = `${downloadInfo.codigo}.pdf`
     link.click()
 
+    // Actualizar estado local
     setEntries(prev =>
       prev.map(e =>
-        e.id === entryId ? { ...e, estado: 'descargada' } : e
+        e.id === downloadInfo.entryId ? { ...e, estado: 'descargada', nombre_asociado: downloadInfo.nombre, apellido_asociado: downloadInfo.apellido } : e
       )
     )
+
+    // Actualizar en DB
+    try {
+      await db.updateEntryName(downloadInfo.entryId, downloadInfo.nombre, downloadInfo.apellido)
+      await db.updateEntryStatus(downloadInfo.entryId, 'descargada')
+    } catch (error) {
+      console.error('Error actualizando la base de datos:', error)
+      alert('Error al guardar la información en la base de datos')
+    }
+
+    setDownloadInfo(null)
     setModalOpen(false)
   }
 
@@ -149,7 +172,7 @@ export default function AdminDashboard() {
     </Card>
   )
 
-  // Calcular las entradas visibles según la página
+  // Paginación
   const indexOfLastEntry = currentPage * entriesPerPage
   const indexOfFirstEntry = indexOfLastEntry - entriesPerPage
   const currentEntries = entries.slice(indexOfFirstEntry, indexOfLastEntry)
@@ -298,7 +321,7 @@ export default function AdminDashboard() {
         onClose={() => setModalOpen(false)}
         title="Detalles de la Entrada"
       >
-        {selectedEntry && (
+        {selectedEntry && downloadInfo && (
           <div className="text-center space-y-4">
             {selectedEntry.qrDataURL && (
               <>
@@ -307,14 +330,30 @@ export default function AdminDashboard() {
                   alt="QR Code"
                   className="mx-auto"
                 />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-2 flex items-center justify-center"
-                  onClick={() => downloadQRPDF(selectedEntry.qrDataURL, selectedEntry.codigo, selectedEntry.id)}
-                >
-                  <Download className="mr-2" size={16} /> Descargar PDF
-                </Button>
+                <div className="flex flex-col gap-2 mt-2">
+                  <input
+                    type="text"
+                    placeholder="Nombre"
+                    value={downloadInfo.nombre}
+                    onChange={e => setDownloadInfo(prev => ({ ...prev, nombre: e.target.value }))}
+                    className="border px-2 py-1 rounded"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Apellido"
+                    value={downloadInfo.apellido}
+                    onChange={e => setDownloadInfo(prev => ({ ...prev, apellido: e.target.value }))}
+                    className="border px-2 py-1 rounded"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="flex items-center justify-center"
+                    onClick={confirmDownloadPDF}
+                  >
+                    <Download className="mr-2" size={16} /> Descargar PDF
+                  </Button>
+                </div>
               </>
             )}
             <div className="space-y-2 text-left">
