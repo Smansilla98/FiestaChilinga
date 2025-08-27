@@ -1,96 +1,102 @@
-import { useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from 'next/router'
-import { QrCode, Shield, Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { LogIn, QrCode } from 'lucide-react'
+import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
+import { db } from '../lib/supabase'
 
 export default function Home() {
-  const { user, profile, loading } = useAuth()
-  const router = useRouter()
+  const [username, setUsername] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!loading) {
-      if (user && profile) {
-        // Redirigir según el rol del usuario
-        if (profile.role === 'admin') {
-          router.push('/dashboard')
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    if (!username.trim()) return
+
+    setLoading(true)
+    
+    try {
+      // Verificar si el usuario existe
+      const { data: user, error } = await db.getUserByName(username.trim())
+      
+      if (user) {
+        // Usuario existente
+        localStorage.setItem('user', JSON.stringify(user))
+        if (user.rol === 'admin') {
+          window.location.href = '/admin'
         } else {
-          router.push('/profile')
+          window.location.href = '/client'
         }
-      } else if (!user) {
-        router.push('/auth/login')
+      } else {
+        // Crear nuevo usuario cliente
+        const { data: newUser, error: createError } = await db.createUser(
+          username.trim(), 
+          '', 
+          'cliente'
+        )
+        
+        if (createError) {
+          alert('Error al crear usuario')
+        } else {
+          localStorage.setItem('user', JSON.stringify(newUser[0]))
+          window.location.href = '/client'
+        }
       }
+    } catch (error) {
+      console.error('Login error:', error)
+      alert('Error al iniciar sesión')
     }
-  }, [user, profile, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-primary-700">Cargando...</p>
-        </div>
-      </div>
-    )
+    
+    setLoading(false)
   }
 
-  // Página de bienvenida (solo se mostrará brevemente antes de la redirección)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            QR Tickets System
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Sistema completo de gestión de entradas con códigos QR. 
-            Genera, valida y administra entradas de manera eficiente.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="p-3 bg-primary-100 rounded-full inline-flex mb-4">
+            <QrCode className="text-primary-600" size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">QR Entry System</h1>
+          <p className="text-gray-600">Sistema de gestión de entradas con códigos QR</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <QrCode className="h-8 w-8 text-primary-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Códigos QR Únicos
-            </h3>
-            <p className="text-gray-600">
-              Genera hasta 600 códigos QR únicos para tus eventos y gestiona su estado en tiempo real.
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre de usuario
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Ingresa tu nombre"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Usa "pepe" para acceso de administrador
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Validación Segura
-            </h3>
-            <p className="text-gray-600">
-              Escanea y valida entradas con seguridad. Control completo sobre el acceso a tus eventos.
-            </p>
-          </div>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            ) : (
+              <LogIn className="mr-2" size={18} />
+            )}
+            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+          </Button>
+        </form>
 
-          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Gestión de Usuarios
-            </h3>
-            <p className="text-gray-600">
-              Sistema de roles completo. Administradores y clientes con accesos diferenciados.
-            </p>
-          </div>
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>🔒 Sistema seguro de autenticación</p>
+          <p className="mt-1">Admin: gestión completa | Cliente: solo consulta</p>
         </div>
-
-        <div className="text-center mt-16">
-          <p className="text-gray-500">
-            Redirigiendo...
-          </p>
-        </div>
-      </div>
+      </Card>
     </div>
   )
 }

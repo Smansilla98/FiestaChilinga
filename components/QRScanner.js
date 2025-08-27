@@ -1,159 +1,94 @@
-import { useState, useRef } from 'react'
-import { Camera, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { QrReader } from 'react-qr-reader'
+import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react'
+import Button from './ui/Button'
+import Card from './ui/Card'
 
-const QRScanner = ({ onScan, onClose }) => {
+export default function QRScanner({ onScan, onClose, isOpen }) {
+  const [result, setResult] = useState('')
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
-  const videoRef = useRef(null)
-  const canvasRef = useRef(null)
-  const streamRef = useRef(null)
 
-  const startScanning = async () => {
-    try {
-      setError('')
+  useEffect(() => {
+    if (isOpen) {
       setScanning(true)
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      })
-      
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
-      }
-
-      // Iniciar detección de QR
-      scanQRCode()
-    } catch (err) {
-      setError('No se pudo acceder a la cámara')
+      setResult('')
+      setError('')
+    } else {
       setScanning(false)
     }
+  }, [isOpen])
+
+  const handleScan = (data) => {
+    if (data) {
+      setResult(data)
+      setScanning(false)
+      onScan(data.text || data)
+    }
   }
 
-  const stopScanning = () => {
+  const handleError = (err) => {
+    setError('Error al acceder a la cámara: ' + err.message)
     setScanning(false)
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
   }
 
-  const scanQRCode = () => {
-    if (!scanning || !videoRef.current || !canvasRef.current) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    
-    // Aquí normalmente usarías una librería como jsQR para decodificar el QR
-    // Por simplicidad, simularemos la detección
-    // En producción, instala jsQR: npm install jsqr
-    
-    setTimeout(() => {
-      if (scanning) {
-        scanQRCode()
-      }
-    }, 100)
-  }
-
-  const handleManualInput = (e) => {
-    e.preventDefault()
-    const formData = new FormData(e.target)
-    const code = formData.get('qr_code')
-    if (code) {
-      onScan(code)
-      e.target.reset()
-    }
-  }
+  if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-md w-full mx-4 p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Escanear código QR</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <Card className="max-w-md w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center">
+            <Camera className="mr-2" size={20} />
+            Escanear QR
+          </h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X size={24} />
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-            {error}
+        {error ? (
+          <div className="text-center py-8">
+            <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => setError('')} variant="secondary">
+              Intentar nuevamente
+            </Button>
           </div>
-        )}
-
-        <div className="space-y-4">
-          {/* Cámara */}
-          <div className="text-center">
-            {!scanning ? (
-              <button
-                onClick={startScanning}
-                className="flex items-center justify-center space-x-2 w-full py-3 px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-              >
-                <Camera size={20} />
-                <span>Activar cámara</span>
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <video
-                    ref={videoRef}
-                    className="w-full h-48 object-cover rounded-md bg-gray-100"
-                    autoPlay
-                    playsInline
-                    muted
-                  />
-                  <canvas ref={canvasRef} className="hidden" />
-                </div>
-                <button
-                  onClick={stopScanning}
-                  className="w-full py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                >
-                  Detener cámara
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="text-center text-gray-500">
-            <span>o</span>
-          </div>
-
-          {/* Input manual */}
-          <form onSubmit={handleManualInput} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ingresar código manualmente
-              </label>
-              <input
-                type="text"
-                name="qr_code"
-                placeholder="Código QR"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+        ) : scanning ? (
+          <div className="relative">
+            <QrReader
+              onResult={handleScan}
+              onError={handleError}
+              style={{ width: '100%' }}
+              constraints={{ facingMode: 'environment' }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="border-2 border-primary-500 w-48 h-48 rounded-lg animate-pulse"></div>
             </div>
-            <button
-              type="submit"
-              className="w-full py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-            >
-              Validar código
-            </button>
-          </form>
+          </div>
+        ) : result ? (
+          <div className="text-center py-8">
+            <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
+            <p className="text-gray-600 mb-4">QR escaneado exitosamente</p>
+            <p className="text-sm bg-gray-100 p-2 rounded mb-4 font-mono">{result}</p>
+          </div>
+        ) : null}
+
+        <div className="flex justify-end space-x-2 mt-4">
+          <Button onClick={onClose} variant="secondary">
+            Cerrar
+          </Button>
+          {!scanning && !error && (
+            <Button onClick={() => setScanning(true)}>
+              Escanear otro
+            </Button>
+          )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }
-
-export default QRScanner
