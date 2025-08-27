@@ -16,7 +16,7 @@
     "qrcode": "^1.5.3",
     "@yudiel/react-qr-scanner": "^2.3.1",
     "lucide-react": "^0.263.1",
-    "pdf-lib": "^1.19.1"
+    "pdf-lib": "1.17.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
