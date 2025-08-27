@@ -8,6 +8,7 @@ import Modal from './ui/Modal'
 import QRScanner from './QRScanner'
 import { db } from '../lib/supabase'
 import { generateQRCodeDataURL } from '../utils/qr-generator'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ total: 0, validadas: 0, pendientes: 0 })
@@ -19,9 +20,7 @@ export default function AdminDashboard() {
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [generating, setGenerating] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     setLoading(true)
@@ -31,7 +30,6 @@ export default function AdminDashboard() {
         db.getEntries(),
         db.getUsers()
       ])
-      
       setStats(statsData)
       setEntries(entriesData.data || [])
       setUsers(usersData.data || [])
@@ -44,21 +42,12 @@ export default function AdminDashboard() {
   const handleQRScan = async (scannedData) => {
     try {
       const { data: entry, error } = await db.getEntryByCode(scannedData)
-      
-      if (error || !entry) {
-        alert('Código QR no válido')
-        return
-      }
-
-      if (entry.estado === 'validado') {
-        alert('Esta entrada ya fue validada')
-        return
-      }
+      if (error || !entry) { alert('Código QR no válido'); return }
+      if (entry.estado === 'validado') { alert('Esta entrada ya fue validada'); return }
 
       const confirmValidation = confirm(
         `¿Validar entrada para: ${entry.nombre_asociado || 'Sin asociar'} ${entry.apellido_asociado || ''}?`
       )
-      
       if (confirmValidation) {
         await db.updateEntryStatus(entry.id, 'validado')
         alert('Entrada validada exitosamente')
@@ -72,9 +61,7 @@ export default function AdminDashboard() {
   }
 
   const generateQRs = async () => {
-    if (!confirm('¿Generar 600 nuevos códigos QR? Esta acción puede tomar algunos minutos.')) {
-      return
-    }
+    if (!confirm('¿Generar 600 nuevos códigos QR? Esta acción puede tomar algunos minutos.')) return
 
     setGenerating(true)
     try {
@@ -83,7 +70,6 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count: 600 })
       })
-      
       const result = await response.json()
       alert(result.message)
       loadData()
@@ -102,6 +88,32 @@ export default function AdminDashboard() {
     }
   }
 
+  // Función para generar PDF con QR y texto
+  const downloadQRPDF = async (qrDataURL, codigo) => {
+    const pdfDoc = await PDFDocument.create()
+    const page = pdfDoc.addPage([400, 600])
+    const { height } = page.getSize()
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    
+    const qrImageBytes = Uint8Array.from(atob(qrDataURL.split(',')[1]), c => c.charCodeAt(0))
+    const qrImage = await pdfDoc.embedPng(qrImageBytes)
+    const qrSize = 200
+    page.drawImage(qrImage, { x: 100, y: height - 300, width: qrSize, height: qrSize })
+
+    // Texto fijo
+    page.drawText('Fiesta Chilinga 30 años', { x: 60, y: height - 350, size: 14, font, color: rgb(0,0,0) })
+    page.drawText('Ruiz Huidobro 4228', { x: 80, y: height - 370, size: 12, font, color: rgb(0,0,0) })
+    page.drawText('Sábado 13 de septiembre 22hs', { x: 60, y: height - 390, size: 12, font, color: rgb(0,0,0) })
+    page.drawText(`Código: ${codigo}`, { x: 80, y: height - 420, size: 10, font, color: rgb(0.2,0.2,0.2) })
+
+    const pdfBytes = await pdfDoc.save()
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${codigo}.pdf`
+    link.click()
+  }
+
   const StatCard = ({ icon: Icon, title, value, color }) => (
     <Card>
       <div className="flex items-center">
@@ -116,59 +128,34 @@ export default function AdminDashboard() {
     </Card>
   )
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          icon={QrCode}
-          title="Total de Entradas"
-          value={stats.total}
-          color="bg-primary-500"
-        />
-        <StatCard
-          icon={CheckCircle}
-          title="Entradas Validadas"
-          value={stats.validadas}
-          color="bg-green-500"
-        />
-        <StatCard
-          icon={Clock}
-          title="Entradas Pendientes"
-          value={stats.pendientes}
-          color="bg-yellow-500"
-        />
+        <StatCard icon={QrCode} title="Total de Entradas" value={stats.total} color="bg-primary-500" />
+        <StatCard icon={CheckCircle} title="Entradas Validadas" value={stats.validadas} color="bg-green-500" />
+        <StatCard icon={Clock} title="Entradas Pendientes" value={stats.pendientes} color="bg-yellow-500" />
       </div>
 
       {/* Acciones */}
       <div className="flex flex-wrap gap-4">
-        <Button
-          onClick={() => setScannerOpen(true)}
-          className="flex items-center"
-        >
+        <Button onClick={() => setScannerOpen(true)} className="flex items-center">
           <Scan className="mr-2" size={18} />
           Escanear QR
         </Button>
-        <Button
-          onClick={generateQRs}
-          disabled={generating}
-          variant="secondary"
-          className="flex items-center"
-        >
+        <Button onClick={generateQRs} disabled={generating} variant="secondary" className="flex items-center">
           <Plus className="mr-2" size={18} />
           {generating ? 'Generando...' : 'Generar QRs'}
         </Button>
       </div>
 
-      {/* Lista de Entradas */}
+      {/* Lista Entradas */}
       <Card>
         <h3 className="text-lg font-semibold mb-4">Entradas Recientes</h3>
         <div className="overflow-x-auto">
@@ -186,33 +173,16 @@ export default function AdminDashboard() {
               {entries.slice(0, 10).map((entry) => (
                 <tr key={entry.id} className="border-b hover:bg-gray-50">
                   <td className="py-2 font-mono text-xs">{entry.codigo}</td>
-                  <td className="py-2">
-                    {entry.nombre_asociado 
-                      ? `${entry.nombre_asociado} ${entry.apellido_asociado}` 
-                      : 'Sin asociar'}
-                  </td>
+                  <td className="py-2">{entry.nombre_asociado ? `${entry.nombre_asociado} ${entry.apellido_asociado}` : 'Sin asociar'}</td>
                   <td className="py-2">
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      entry.estado === 'validado' 
-                        ? 'bg-green-100 text-green-800' 
-                        : entry.estado === 'pendiente'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {entry.estado}
-                    </span>
+                      entry.estado === 'validado' ? 'bg-green-100 text-green-800' :
+                      entry.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>{entry.estado}</span>
                   </td>
+                  <td className="py-2">{new Date(entry.created_at).toLocaleDateString()}</td>
                   <td className="py-2">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-2">
-                    <Button
-                      onClick={() => showEntryDetails(entry)}
-                      size="sm"
-                      variant="secondary"
-                    >
-                      Ver QR
-                    </Button>
+                    <Button onClick={() => showEntryDetails(entry)} size="sm" variant="secondary">Ver QR</Button>
                   </td>
                 </tr>
               ))}
@@ -222,41 +192,22 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Escáner QR */}
-      <QRScanner
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={handleQRScan}
-      />
+      <QRScanner isOpen={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleQRScan} />
 
-      {/* Modal de Detalles de Entrada */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Detalles de la Entrada"
-      >
+      {/* Modal Detalles Entrada */}
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Detalles de la Entrada">
         {selectedEntry && (
           <div className="text-center space-y-4">
             {selectedEntry.qrDataURL && (
               <>
-                <img
-                  src={selectedEntry.qrDataURL}
-                  alt="QR Code"
-                  className="mx-auto"
-                />
+                <img src={selectedEntry.qrDataURL} alt="QR Code" className="mx-auto" />
                 <Button
                   size="sm"
                   variant="secondary"
                   className="mt-2 flex items-center justify-center"
-                  onClick={() => {
-                    const link = document.createElement('a')
-                    link.href = selectedEntry.qrDataURL
-                    link.download = `${selectedEntry.codigo}.png`
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                  }}
+                  onClick={() => downloadQRPDF(selectedEntry.qrDataURL, selectedEntry.codigo)}
                 >
-                  <Download className="mr-2" size={16} /> Descargar QR
+                  <Download className="mr-2" size={16} /> Descargar PDF
                 </Button>
               </>
             )}
@@ -264,22 +215,13 @@ export default function AdminDashboard() {
               <p><strong>Código:</strong> {selectedEntry.codigo}</p>
               <p><strong>Estado:</strong> 
                 <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                  selectedEntry.estado === 'validado' 
-                    ? 'bg-green-100 text-green-800' 
-                    : selectedEntry.estado === 'pendiente'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {selectedEntry.estado}
-                </span>
+                  selectedEntry.estado === 'validado' ? 'bg-green-100 text-green-800' :
+                  selectedEntry.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                }`}>{selectedEntry.estado}</span>
               </p>
-              {selectedEntry.nombre_asociado && (
-                <p><strong>Asociado a:</strong> {selectedEntry.nombre_asociado} {selectedEntry.apellido_asociado}</p>
-              )}
+              {selectedEntry.nombre_asociado && <p><strong>Asociado a:</strong> {selectedEntry.nombre_asociado} {selectedEntry.apellido_asociado}</p>}
               <p><strong>Creado:</strong> {new Date(selectedEntry.created_at).toLocaleString()}</p>
-              {selectedEntry.validated_at && (
-                <p><strong>Validado:</strong> {new Date(selectedEntry.validated_at).toLocaleString()}</p>
-              )}
+              {selectedEntry.validated_at && <p><strong>Validado:</strong> {new Date(selectedEntry.validated_at).toLocaleString()}</p>}
             </div>
           </div>
         )}
