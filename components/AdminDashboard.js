@@ -110,7 +110,7 @@ export default function AdminDashboard() {
     const { width, height } = page.getSize()
 
     // Imagen de fondo
-    const bgUrl = '/background.jpg' // colocar en public/
+    const bgUrl = '/background.png' // colocar en public/
     const bgBytes = await fetch(bgUrl).then(res => res.arrayBuffer())
     const bgImage = await pdfDoc.embedPng(bgBytes)
     page.drawImage(bgImage, { x: 0, y: 0, width, height })
