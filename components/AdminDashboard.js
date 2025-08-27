@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from 'react'
 import { Users, QrCode, CheckCircle, Clock, Plus, Scan, Download } from 'lucide-react'
 import Card from './ui/Card'
@@ -235,11 +237,28 @@ export default function AdminDashboard() {
         {selectedEntry && (
           <div className="text-center space-y-4">
             {selectedEntry.qrDataURL && (
-              <img
-                src={selectedEntry.qrDataURL}
-                alt="QR Code"
-                className="mx-auto"
-              />
+              <>
+                <img
+                  src={selectedEntry.qrDataURL}
+                  alt="QR Code"
+                  className="mx-auto"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-2 flex items-center justify-center"
+                  onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = selectedEntry.qrDataURL
+                    link.download = `${selectedEntry.codigo}.png`
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                  }}
+                >
+                  <Download className="mr-2" size={16} /> Descargar QR
+                </Button>
+              </>
             )}
             <div className="space-y-2 text-left">
               <p><strong>Código:</strong> {selectedEntry.codigo}</p>
