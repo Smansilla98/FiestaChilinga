@@ -8,7 +8,7 @@ import Modal from './ui/Modal'
 import QRScanner from './QRScanner'
 import { db } from '../lib/supabase'
 import { generateQRCodeDataURL } from '../utils/qr-generator'
-import { PDFDocument, rgb } from 'pdf-lib'
+import { PDFDocument } from 'pdf-lib'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ total: 0, validadas: 0, pendientes: 0 })
@@ -103,31 +103,35 @@ export default function AdminDashboard() {
     }
   }
 
-  // Función para descargar PDF con fondo y QR centrado
-  const downloadQRPDF = async (qrDataURL, codigo) => {
+  const downloadQRPDF = async (qrDataURL, codigo, entryId) => {
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage([400, 600])
     const { width, height } = page.getSize()
 
-    // Imagen de fondo
-    const bgUrl = '/background.png' // colocar en public/
+    const bgUrl = '/background.png'
     const bgBytes = await fetch(bgUrl).then(res => res.arrayBuffer())
     const bgImage = await pdfDoc.embedPng(bgBytes)
     page.drawImage(bgImage, { x: 0, y: 0, width, height })
 
-    // QR centrado
     const qrBytes = Uint8Array.from(atob(qrDataURL.split(',')[1]), c => c.charCodeAt(0))
     const qrImage = await pdfDoc.embedPng(qrBytes)
     const qrSize = 150
     page.drawImage(qrImage, { x: (width - qrSize)/2, y: (height - qrSize)/2, width: qrSize, height: qrSize })
 
-    // Descargar PDF
     const pdfBytes = await pdfDoc.save()
     const blob = new Blob([pdfBytes], { type: 'application/pdf' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `${codigo}.pdf`
     link.click()
+
+    // Marcar como descargada
+    setEntries(prev =>
+      prev.map(e =>
+        e.id === entryId ? { ...e, estado: 'descargada' } : e
+      )
+    )
+    setModalOpen(false)
   }
 
   const StatCard = ({ icon: Icon, title, value, color }) => (
@@ -203,6 +207,7 @@ export default function AdminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
+                <th className="text-left py-2">#</th>
                 <th className="text-left py-2">Código</th>
                 <th className="text-left py-2">Asociado a</th>
                 <th className="text-left py-2">Estado</th>
@@ -211,8 +216,9 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {entries.slice(0, 10).map((entry) => (
+              {entries.slice(0, 10).map((entry, i) => (
                 <tr key={entry.id} className="border-b hover:bg-gray-50">
+                  <td className="py-2 text-center font-mono text-xs">{i + 1}</td>
                   <td className="py-2 font-mono text-xs">{entry.codigo}</td>
                   <td className="py-2">
                     {entry.nombre_asociado 
@@ -225,6 +231,8 @@ export default function AdminDashboard() {
                         ? 'bg-green-100 text-green-800' 
                         : entry.estado === 'pendiente'
                         ? 'bg-yellow-100 text-yellow-800'
+                        : entry.estado === 'descargada'
+                        ? 'bg-blue-100 text-blue-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
                       {entry.estado}
@@ -275,7 +283,7 @@ export default function AdminDashboard() {
                   size="sm"
                   variant="secondary"
                   className="mt-2 flex items-center justify-center"
-                  onClick={() => downloadQRPDF(selectedEntry.qrDataURL, selectedEntry.codigo)}
+                  onClick={() => downloadQRPDF(selectedEntry.qrDataURL, selectedEntry.codigo, selectedEntry.id)}
                 >
                   <Download className="mr-2" size={16} /> Descargar PDF
                 </Button>
@@ -289,6 +297,8 @@ export default function AdminDashboard() {
                     ? 'bg-green-100 text-green-800' 
                     : selectedEntry.estado === 'pendiente'
                     ? 'bg-yellow-100 text-yellow-800'
+                    : selectedEntry.estado === 'descargada'
+                    ? 'bg-blue-100 text-blue-800'
                     : 'bg-red-100 text-red-800'
                 }`}>
                   {selectedEntry.estado}
