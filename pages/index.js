@@ -56,14 +56,14 @@ export default function Home() {
           <div className="p-3 bg-primary-100 rounded-full inline-flex mb-4">
             <QrCode className="text-primary-600" size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">QR Entry System</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Fiesta Chilinga 2025</h1>
           <p className="text-gray-600">Sistema de gestión de entradas con códigos QR</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre de usuario
+              Usuario
             </label>
             <input
               type="text"
@@ -73,9 +73,6 @@ export default function Home() {
               placeholder="Ingresa tu nombre"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Usa "pepe" para acceso de administrador
-            </p>
           </div>
 
           <Button
