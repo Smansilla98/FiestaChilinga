@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useEffect } from 'react'
-import { QrReader } from 'react-qr-reader'
+import { QrReader } from 'react-qr-reader-v2'
 import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react'
 import Button from './ui/Button'
 import Card from './ui/Card'
@@ -19,17 +21,20 @@ export default function QRScanner({ onScan, onClose, isOpen }) {
     }
   }, [isOpen])
 
-  const handleScan = (data) => {
-    if (data) {
-      setResult(data)
+  const handleResult = (result, err) => {
+    if (!!result) {
+      setResult(result?.text)
       setScanning(false)
-      onScan(data.text || data)
+      onScan(result?.text)
     }
-  }
 
-  const handleError = (err) => {
-    setError('Error al acceder a la cámara: ' + err.message)
-    setScanning(false)
+    if (!!err) {
+      console.error(err)
+      if (err.message?.includes("NotAllowedError")) {
+        setError("Permiso denegado para usar la cámara")
+        setScanning(false)
+      }
+    }
   }
 
   if (!isOpen) return null
@@ -61,10 +66,9 @@ export default function QRScanner({ onScan, onClose, isOpen }) {
         ) : scanning ? (
           <div className="relative">
             <QrReader
-              onResult={handleScan}
-              onError={handleError}
-              style={{ width: '100%' }}
               constraints={{ facingMode: 'environment' }}
+              onResult={handleResult}
+              style={{ width: '100%' }}
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="border-2 border-primary-500 w-48 h-48 rounded-lg animate-pulse"></div>
