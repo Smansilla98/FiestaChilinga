@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Users, QrCode, CheckCircle, Clock, Plus, Scan, Download } from 'lucide-react'
+import { Users, QrCode, CheckCircle, Clock, Plus, Scan, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import Card from './ui/Card'
 import Button from './ui/Button'
 import Modal from './ui/Modal'
@@ -19,6 +19,8 @@ export default function AdminDashboard() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [generating, setGenerating] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const entriesPerPage = 10
 
   useEffect(() => {
     loadData()
@@ -125,7 +127,6 @@ export default function AdminDashboard() {
     link.download = `${codigo}.pdf`
     link.click()
 
-    // Marcar como descargada
     setEntries(prev =>
       prev.map(e =>
         e.id === entryId ? { ...e, estado: 'descargada' } : e
@@ -147,6 +148,20 @@ export default function AdminDashboard() {
       </div>
     </Card>
   )
+
+  // Calcular las entradas visibles según la página
+  const indexOfLastEntry = currentPage * entriesPerPage
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage
+  const currentEntries = entries.slice(indexOfFirstEntry, indexOfLastEntry)
+  const totalPages = Math.ceil(entries.length / entriesPerPage)
+
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(prev => prev + 1)
+  }
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(prev => prev - 1)
+  }
 
   if (loading) {
     return (
@@ -216,9 +231,9 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {entries.slice(0, 10).map((entry, i) => (
+              {currentEntries.map((entry, i) => (
                 <tr key={entry.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 text-center font-mono text-xs">{i + 1}</td>
+                  <td className="py-2 text-center font-mono text-xs">{indexOfFirstEntry + i + 1}</td>
                   <td className="py-2 font-mono text-xs">{entry.codigo}</td>
                   <td className="py-2">
                     {entry.nombre_asociado 
@@ -254,6 +269,19 @@ export default function AdminDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Paginación */}
+        <div className="flex justify-center gap-2 mt-4">
+          <Button onClick={prevPage} disabled={currentPage === 1} size="sm" variant="secondary">
+            <ChevronLeft size={16} /> Anterior
+          </Button>
+          <span className="flex items-center px-2">
+            Página {currentPage} de {totalPages}
+          </span>
+          <Button onClick={nextPage} disabled={currentPage === totalPages} size="sm" variant="secondary">
+            Siguiente <ChevronRight size={16} />
+          </Button>
         </div>
       </Card>
 
