@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [scannerMessage, setScannerMessage] = useState("")
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState(null)
   const [generating, setGenerating] = useState(false)
@@ -48,31 +49,26 @@ export default function AdminDashboard() {
   const handleQRScan = async (scannedData) => {
     try {
       const { data: entry, error } = await db.getEntryByCode(scannedData)
-      
       if (error || !entry) {
-        window.alert('❌ Código QR no válido')
+        setScannerMessage('❌ Código QR no válido')
         return
       }
-
       if (entry.estado === 'validado') {
-        window.alert('❌ Error: Esta entrada ya fue validada. No se puede volver a validar.')
+        setScannerMessage('❌ Error: Esta entrada ya fue validada. No se puede volver a validar.')
         return
       }
-
       const confirmValidation = window.confirm(
         `¿Validar entrada para: ${entry.nombre_asociado || 'Sin asociar'} ${entry.apellido_asociado || ''}?`
       )
-      
       if (confirmValidation) {
         await db.updateEntryStatus(entry.id, 'validado')
-        window.alert('✅ Entrada validada exitosamente')
+        setScannerMessage('✅ Entrada validada exitosamente')
         loadData()
       }
     } catch (error) {
       console.error('Error processing QR:', error)
-      window.alert('❌ Error al procesar el código QR')
+      setScannerMessage('❌ Error al procesar el código QR')
     }
-    setScannerOpen(false)
   }
 
   const generateQRs = async () => {
@@ -314,8 +310,9 @@ export default function AdminDashboard() {
       {/* Escáner QR */}
       <QRScanner
         isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
+        onClose={() => { setScannerOpen(false); setScannerMessage(""); }}
         onScan={handleQRScan}
+        responseMessage={scannerMessage}
       />
 
       {/* Modal de Detalles de Entrada */}

@@ -72,6 +72,18 @@ export default function QRScanner({ onScan, onClose, isOpen }) {
               <div className="border-2 border-primary-500 w-48 h-48 rounded-lg animate-pulse"></div>
             </div>
           </div>
+        ) : responseMessage ? (
+          <div className="text-center py-8">
+            {responseMessage.startsWith('✅') ? (
+              <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
+            ) : (
+              <AlertCircle className="mx-auto mb-4 text-red-500" size={48} />
+            )}
+            <p className={`mb-4 ${responseMessage.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{responseMessage}</p>
+            {result && (
+              <p className="text-sm bg-gray-100 p-2 rounded mb-4 font-mono">{result}</p>
+            )}
+          </div>
         ) : result ? (
           <div className="text-center py-8">
             <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
