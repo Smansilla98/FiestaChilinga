@@ -6,7 +6,7 @@ import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react'
 import Button from './ui/Button'
 import Card from './ui/Card'
 
-export default function QRScanner({ onScan, onClose, isOpen }) {
+export default function QRScanner({ onScan, onClose, isOpen, responseMessage = "" }) {
   const [result, setResult] = useState('')
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
