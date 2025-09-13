@@ -50,27 +50,27 @@ export default function AdminDashboard() {
       const { data: entry, error } = await db.getEntryByCode(scannedData)
       
       if (error || !entry) {
-        alert('Código QR no válido')
+        window.alert('❌ Código QR no válido')
         return
       }
 
       if (entry.estado === 'validado') {
-        alert('Esta entrada ya fue validada')
+        window.alert('❌ Error: Esta entrada ya fue validada. No se puede volver a validar.')
         return
       }
 
-      const confirmValidation = confirm(
+      const confirmValidation = window.confirm(
         `¿Validar entrada para: ${entry.nombre_asociado || 'Sin asociar'} ${entry.apellido_asociado || ''}?`
       )
       
       if (confirmValidation) {
         await db.updateEntryStatus(entry.id, 'validado')
-        alert('Entrada validada exitosamente')
+        window.alert('✅ Entrada validada exitosamente')
         loadData()
       }
     } catch (error) {
       console.error('Error processing QR:', error)
-      alert('Error al procesar el código QR')
+      window.alert('❌ Error al procesar el código QR')
     }
     setScannerOpen(false)
   }
@@ -259,9 +259,12 @@ export default function AdminDashboard() {
                   <td className="py-2 text-center font-mono text-xs">{indexOfFirstEntry + i + 1}</td>
                   <td className="py-2 font-mono text-xs">{entry.codigo}</td>
                   <td className="py-2">
-                    {entry.nombre_asociado 
-                      ? `${entry.nombre_asociado} ${entry.apellido_asociado}` 
-                      : 'Sin asociar'}
+                    {entry.nombre_asociado && entry.apellido_asociado ? (
+                      <div>
+                        <span className="block text-xs text-gray-500">Entrada asignada a:</span>
+                        <span className="font-medium">{entry.nombre_asociado} {entry.apellido_asociado}</span>
+                      </div>
+                    ) : 'Sin asociar'}
                   </td>
                   <td className="py-2">
                     <span className={`px-2 py-1 rounded-full text-xs ${
