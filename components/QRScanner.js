@@ -10,6 +10,7 @@ export default function QRScanner({ onScan, onClose, isOpen }) {
   const [result, setResult] = useState('')
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
+  responseMessage = responseMessage || ""
 
   useEffect(() => {
     if (isOpen) {
